@@ -1,0 +1,13 @@
+{
+  "name": "@aura/sdk",
+  "version": "0.1.0",
+  "description": "PROJECT AURA TypeScript Platform SDK and Manifest Validator",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": ["aura", "os", "sdk", "jarvis", "wayland"],
+  "author": "PROJECT AURA Principal Engineering Team",
+  "license": "MIT"
+}

@@ -1,0 +1,24 @@
+[package]
+name = "aura-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aura-core = { path = "../aura-core" }
+aura-policy = { path = "../aura-policy" }
+aura-system = { path = "../aura-system" }
+aura-compat = { path = "../aura-compat" }
+aura-dev = { path = "../aura-dev" }
+aura-shell = { path = "../aura-shell" }
+jarvis-runtime = { path = "../jarvis-runtime" }
+jarvis-providers = { path = "../jarvis-providers" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }

@@ -1,0 +1,20 @@
+[package]
+name = "jarvis-runtime"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aura-core = { path = "../aura-core" }
+aura-policy = { path = "../aura-policy" }
+aura-system = { path = "../aura-system" }
+jarvis-providers = { path = "../jarvis-providers" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }

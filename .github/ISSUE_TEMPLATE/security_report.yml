@@ -1,0 +1,23 @@
+name: Security Vulnerability Report
+description: Report a security vulnerability, prompt injection, or trust boundary issue in PROJECT AURA
+title: "[SECURITY]: "
+labels: ["security", "critical"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Confidentiality Notice**: If this vulnerability could expose private keys or execute arbitrary code without user consent, please submit details carefully.
+  - type: textarea
+    id: vulnerability_type
+    attributes:
+      label: Vulnerability Category
+      description: Prompt injection, Capability bypass, Secret leakage, Privilege escalation, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: attack_scenario
+    attributes:
+      label: Proof of Concept & Attack Scenario
+      description: Detailed steps to trigger the security violation.
+    validations:
+      required: true

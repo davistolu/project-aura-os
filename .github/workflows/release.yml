@@ -1,0 +1,36 @@
+name: PROJECT AURA Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release-artifacts:
+    name: Build Release Binaries & Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Release Workspace Binaries
+        run: |
+          cargo build --release --workspace
+
+      - name: Package Binaries
+        run: |
+          mkdir -p dist
+          cp target/release/aura dist/ 2>/dev/null || true
+          tar -czf dist/aura-linux-x86_64.tar.gz -C dist aura 2>/dev/null || true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

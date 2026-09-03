@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/aura-core",
+    "crates/aura-policy",
+    "crates/aura-system",
+    "crates/jarvis-providers",
+    "crates/jarvis-runtime",
+    "crates/aura-compat",
+    "crates/aura-dev",
+    "crates/aura-shell",
+    "crates/aura-cli",
+    "crates/aura-sdk",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["PROJECT AURA Principal Engineering Team"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.38", features = ["full"] }
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.8", features = ["v4", "serde"] }
+clap = { version = "4.5", features = ["derive"] }
+futures = "0.3"

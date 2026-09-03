@@ -1,0 +1,26 @@
+name: Feature / Capability Request
+description: Propose a new feature, tool, or capability for PROJECT AURA
+title: "[FEAT]: "
+labels: ["enhancement", "proposal"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: Is your feature request related to a problem or limitation?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+    validations:
+      required: true
+  - type: textarea
+    id: security_impact
+    attributes:
+      label: Security & Capability Impact
+      description: What permission tier (`OBSERVE`, `EXECUTE_SAFE`, `EXECUTE_PRIVILEGED`) and capability does this require?
+    validations:
+      required: true
