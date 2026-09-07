@@ -30,6 +30,10 @@ pub enum Capability {
     VmManage,
     /// Manage persistent user automations and event hooks
     AutomationManage,
+    /// Access microphone audio for voice assistant wake word and speech recognition
+    AudioCapture,
+    /// Play synthetic voice audio and notifications through system speakers
+    AudioPlayback,
 }
 
 impl fmt::Display for Capability {
@@ -48,6 +52,8 @@ impl fmt::Display for Capability {
             Capability::NotificationSend => write!(f, "notification.send"),
             Capability::VmManage => write!(f, "vm.manage"),
             Capability::AutomationManage => write!(f, "automation.manage"),
+            Capability::AudioCapture => write!(f, "audio.capture"),
+            Capability::AudioPlayback => write!(f, "audio.playback"),
         }
     }
 }

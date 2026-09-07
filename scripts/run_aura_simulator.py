@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-PROJECT AURA - Live Interactive Terminal Desktop & JARVIS Runtime
+PROJECT AURA - Live Interactive Terminal Desktop & JARVIS Voice Assistant Runtime
 Run this script to immediately experience and test AURA OS, the Wayland Command Palette,
-Hardware Inspector, Workspace Profiles, and JARVIS Capability-Gated Agent on your host machine.
+Voice Assistant ("Hey Jarvis", "Aura"), Hardware Inspector, and Capability-Gated Security.
 """
 
 import sys
@@ -25,8 +25,24 @@ class AuraColors:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
     FAIL = '\033[91m'
+    MAGENTA = '\033[95m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
+
+class VoiceSynthesizer:
+    @staticmethod
+    def speak(text):
+        """Speak response using Windows SAPI TTS or fallback gracefully"""
+        if sys.platform == "win32":
+            try:
+                # Use Windows native PowerShell SAPI voice synthesizer without external dependencies
+                clean_text = text.replace('"', '').replace("'", "").replace("\n", " ")
+                cmd = f'powershell -Command "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak(\'{clean_text}\')"'
+                # Run async so it doesn't block terminal typing
+                import subprocess
+                subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
 
 class MockHardware:
     @staticmethod
@@ -36,7 +52,8 @@ class MockHardware:
             "cpu_usage": "3.8%",
             "ram_used": "420 MB / 32,768 MB (Ultra-Lightweight Idle Budget)",
             "gpu": "Vulkan 1.3 Direct Rendering (Mesa 24.1)",
-            "power_mode": "Balanced",
+            "audio_subsystem": "PipeWire 1.0 Low-Latency Audio + VAD",
+            "voice_assistant": "JARVIS Voice Engine (Neural Male)",
             "active_workspace": "Development",
             "audit_log": "/var/log/aura/ai/audit.jsonl"
         }
@@ -48,7 +65,9 @@ class JarvisSimulator:
             "system.process.list",
             "workspace.manage",
             "filesystem.read[*]",
-            "notification.send"
+            "notification.send",
+            "audio.capture",
+            "audio.playback"
         }
         self.workspaces = {
             "1": "General (Browser, Notes)",
@@ -59,6 +78,8 @@ class JarvisSimulator:
         }
         self.current_workspace = "2"
         self.audit_events = []
+        self.voice_enabled = True
+        self.mic_muted = False
 
     def log_audit(self, tool, cap, decision, details):
         event = {
@@ -76,10 +97,52 @@ class JarvisSimulator:
         q = query.strip()
         lower = q.lower()
 
+        # Check for Voice Wake-Word
+        is_voice = False
+        voice_phrase = q
+        if lower.startswith("hey jarvis") or lower.startswith("jarvis"):
+            is_voice = True
+            voice_phrase = q.split(maxsplit=2)[-1] if len(q.split()) > 2 else ""
+            lower = voice_phrase.lower()
+        elif lower.startswith("aura"):
+            is_voice = True
+            voice_phrase = q.split(maxsplit=1)[-1] if len(q.split()) > 1 else ""
+            lower = voice_phrase.lower()
+
+        # Voice Assistant Controls
+        if lower in ["voice", "voice status"]:
+            status_mic = f"{AuraColors.FAIL}MUTED{AuraColors.ENDC}" if self.mic_muted else f"{AuraColors.GREEN}ACTIVE (Listening for 'Hey Jarvis' / 'Aura'){AuraColors.ENDC}"
+            status_tts = f"{AuraColors.GREEN}ENABLED (Speaks through speakers){AuraColors.ENDC}" if self.voice_enabled else f"{AuraColors.FAIL}DISABLED{AuraColors.ENDC}"
+            return f"{AuraColors.MAGENTA}🎙️ [JARVIS Voice Assistant Subsystem]{AuraColors.ENDC}\n" \
+                   f" - Microphone (AudioCapture): {status_mic}\n" \
+                   f" - Speech Synthesis (AudioPlayback): {status_tts}\n" \
+                   f" - Wake Words: 'Hey Jarvis', 'Aura', 'Jarvis'\n" \
+                   f" - STT Pipeline: Whisper Neural V3\n" \
+                   f" - TTS Engine: Piper Neural Voice Model (Low-Latency < 50ms)"
+
+        if lower in ["listen", "mic", "speak"]:
+            if self.mic_muted:
+                return f"{AuraColors.FAIL}Microphone is muted. Type 'mute' to unmute first.{AuraColors.ENDC}"
+            print(f"{AuraColors.YELLOW}🎙️ [LISTENING TO YOUR MICROPHONE...] Speak now...{AuraColors.ENDC}")
+            script_path = os.path.join(os.path.dirname(__file__), "listen_mic.ps1")
+            cmd = ["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path, "-TimeoutSeconds", "6"]
+            try:
+                import subprocess
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=9)
+                transcription = proc.stdout.strip()
+                if not transcription or "__NO_SPEECH_DETECTED__" in transcription:
+                    return f"{AuraColors.YELLOW}No speech was detected from your microphone.{AuraColors.ENDC}"
+                print(f"{AuraColors.GREEN}🗣️ Heard from Microphone:{AuraColors.ENDC} \"{transcription}\"")
+                return self.handle_command(transcription)
+            except Exception as e:
+                return f"{AuraColors.FAIL}Microphone capture error: {e}{AuraColors.ENDC}"
+
         # 1. Deterministic Fast-Path
         if lower in ["status", "hardware", "sys"]:
             self.log_audit("sys_hardware_inspect", "system.hardware.read", "ALLOWED", "System status query")
             metrics = MockHardware.get_metrics()
+            if self.voice_enabled and is_voice:
+                VoiceSynthesizer.speak("System hardware inspected. All platform parameters are nominal.")
             return f"{AuraColors.CYAN}[AURA System Daemon - Hardware Snapshot]{AuraColors.ENDC}\n" + \
                    json.dumps(metrics, indent=2)
 
@@ -88,6 +151,9 @@ class JarvisSimulator:
             if len(parts) > 1 and parts[1] in self.workspaces:
                 self.current_workspace = parts[1]
                 self.log_audit("workspace_switch", "workspace.manage", "ALLOWED", f"Switched to workspace {parts[1]}")
+                msg = f"Switched to {self.workspaces[parts[1]].split()[0]} profile."
+                if self.voice_enabled and is_voice:
+                    VoiceSynthesizer.speak(msg)
                 return f"{AuraColors.GREEN}[OK] Switched active desktop profile to: {self.workspaces[parts[1]]}{AuraColors.ENDC}"
             else:
                 out = f"{AuraColors.CYAN}Available Workspaces:{AuraColors.ENDC}\n"
@@ -100,16 +166,24 @@ class JarvisSimulator:
             app = q.split(maxsplit=1)[1]
             if "game" in lower or "cyberpunk" in lower:
                 self.log_audit("proton_launcher", "system.process.start", "ALLOWED", f"Proton runner for {app}")
+                if self.voice_enabled and is_voice:
+                    VoiceSynthesizer.speak(f"Launching {app} in Proton Direct Gaming Mode.")
                 return f"{AuraColors.GREEN}[Proton Direct Runtime]{AuraColors.ENDC} Launched '{app}' with DXVK, VKD3D-Proton & Gamescope (1440p @ 144Hz)."
             elif "notepad" in lower or "office" in lower:
                 self.log_audit("wine_launcher", "system.process.start", "ALLOWED", f"Wine prefix for {app}")
+                if self.voice_enabled and is_voice:
+                    VoiceSynthesizer.speak(f"Launching {app} in isolated Wine prefix.")
                 return f"{AuraColors.BLUE}[Wine Staging Runtime]{AuraColors.ENDC} Launched '{app}' in isolated prefix: /var/lib/aura/wine_prefixes/{app}."
             else:
                 self.log_audit("kvm_launcher", "vm.manage", "ALLOWED", f"KVM Fallback for {app}")
+                if self.voice_enabled and is_voice:
+                    VoiceSynthesizer.speak(f"Routing {app} to Windows Virtual Machine fallback.")
                 return f"{AuraColors.YELLOW}[KVM VM Fallback]{AuraColors.ENDC} Non-Wine compatible app '{app}' routed to virtio-accelerated Windows VM."
 
         if lower.startswith("doctor") or lower.startswith("dev"):
             self.log_audit("dev_environment_doctor", "filesystem.read[*]", "ALLOWED", "Checked project environment")
+            if self.voice_enabled and is_voice:
+                VoiceSynthesizer.speak("Developer environments and toolchains are verified healthy.")
             return f"{AuraColors.CYAN}[AURA Dev Doctor]{AuraColors.ENDC}\n" \
                    f" - Detected Stacks: Rust (Cargo), Nix Flake, TypeScript SDK, Python 3.12\n" \
                    f" - Sandboxed Toolchains: Ready\n" \
@@ -124,34 +198,47 @@ class JarvisSimulator:
         # 2. AI Reasoning & Capability Enforcement
         if "delete" in lower or "rm -rf" in lower:
             ev = self.log_audit("filesystem_delete", "filesystem.delete", "APPROVAL_REQUIRED", q)
+            if self.voice_enabled and is_voice:
+                VoiceSynthesizer.speak("Security alert: Privileged operation requires user approval.")
             return f"{AuraColors.YELLOW}[JARVIS Security Gate: EXECUTE_PRIVILEGED]{AuraColors.ENDC}\n" \
                    f"Action '{q}' requires explicit user approval modal.\n" \
                    f"Capability 'filesystem.delete' is not granted automatically in standard profile."
 
         if "sudo" in lower or "root" in lower:
             ev = self.log_audit("terminal_exec", "system.privileged", "DENIED", q)
+            if self.voice_enabled and is_voice:
+                VoiceSynthesizer.speak("Access denied. The AI runtime is not permitted to execute root commands.")
             return f"{AuraColors.FAIL}[JARVIS Security Violation: Zero Ambient Authority]{AuraColors.ENDC}\n" \
                    f"AI models in PROJECT AURA cannot invoke raw sudo/root commands. Action blocked."
 
-        # Safe AI Response
+        # Safe AI Voice/Text Response
         self.log_audit("jarvis_reasoning", "ai.reasoning", "ALLOWED", q)
-        return f"{AuraColors.BLUE}[JARVIS Local Runtime (SLM)]: {AuraColors.ENDC}Understood intent for '{q}'. " \
-               f"Executed task deterministically within declared project capability sandbox."
+        response_text = f"I have processed your request for '{q}' within the capability-bounded security sandbox."
+        if is_voice:
+            response_text = f"Understood. Operating systems and workspace parameters are configured for '{voice_phrase}'."
+        if self.voice_enabled:
+            VoiceSynthesizer.speak(response_text)
+
+        prefix = f"{AuraColors.MAGENTA}🎙️ [JARVIS Voice Assistant]: {AuraColors.ENDC}" if is_voice else f"{AuraColors.BLUE}[JARVIS Local SLM]: {AuraColors.ENDC}"
+        return f"{prefix}{response_text}"
 
 def print_banner():
     banner = f"""{AuraColors.CYAN}
 ================================================================================
-  PROJECT AURA - Linux + Wayland + JARVIS AI Runtime + NixOS Base
+  PROJECT AURA - Linux + Wayland + JARVIS Voice Assistant + NixOS Base
 ================================================================================{AuraColors.ENDC}
   * Platform Running in Host Emulation Mode (Type 'exit' to quit)
 --------------------------------------------------------------------------------
-  Commands / Global Palette (Ctrl+Space equivalent):
-    * status           - Inspect hardware, CPU, RAM & idle budget
-    * workspace [1-5]  - Switch Wayland workspace profiles (General, Dev, Gaming, etc.)
-    * run <app.exe>    - Test Windows app/game runner (Proton / Wine / KVM)
-    * dev doctor       - Check developer toolchains and isolated Nix shells
-    * audit            - View real-time tamper-evident AI audit logs
-    * <any question>   - Query JARVIS OS-Native AI Runtime
+  {AuraColors.MAGENTA}🎙️ Voice Assistant Commands (Wake words: 'Hey Jarvis', 'Aura'):{AuraColors.ENDC}
+    * {AuraColors.BOLD}Hey Jarvis, status{AuraColors.ENDC}       - Spoken hardware & resource inspection
+    * {AuraColors.BOLD}Hey Jarvis, workspace 3{AuraColors.ENDC}  - Voice-triggered Gaming Mode profile switch
+    * {AuraColors.BOLD}voice{AuraColors.ENDC}                    - Check Voice Assistant audio & microphone status
+    * {AuraColors.BOLD}listen / mic{AuraColors.ENDC}             - Capture LIVE audio from your real physical microphone
+    * {AuraColors.BOLD}voice on / voice off{AuraColors.ENDC}     - Enable/disable speech synthesizer voice audio
+--------------------------------------------------------------------------------
+  Hands-Free Mode: Run 'python scripts/run_live_voice.py' for continuous mic listening
+  Keyboard / Command Palette:
+    * status | workspace [1-5] | run <app.exe> | dev doctor | audit
 ================================================================================
 """
     print(banner)
