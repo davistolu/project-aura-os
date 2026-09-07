@@ -170,8 +170,8 @@ class JarvisDialogueEngine:
                 return {"text": resp, "action_type": "web_search", "action_data": search_res, "is_system_action": False}
 
         # 8. Wi-Fi Wireless Configuration Voice Commands
-        if re.search(r'\b(connect to (?:wifi|wi-fi|network)|join wifi)\s+([A-Za-z0-9_\-\s]+)\b', cleaned):
-            ssid_match = re.search(r'\b(?:connect to (?:wifi|wi-fi|network)|join wifi)\s+([A-Za-z0-9_\-\s]+)\b', cleaned)
+        ssid_match = re.search(r'\b(?:connect to (?:wifi|wi-fi|network)|join wifi)\s+([A-Za-z0-9_\-\s]+)\b', q, re.IGNORECASE)
+        if ssid_match:
             target_ssid = ssid_match.group(1).strip()
             res = self.settings.connect_wifi(target_ssid)
             resp = res["text"]
@@ -212,9 +212,9 @@ class JarvisDialogueEngine:
             self.memory.record_turn(q, resp)
             return {"text": resp, "action_type": "bluetooth", "action_data": res, "is_system_action": True}
 
-        if re.search(r'\b(?:connect|pair)\s+(?:to\s+)?(?:bluetooth\s+)?(?:my\s+)?([A-Za-z0-9_\-\s]+)\b', cleaned) and "wifi" not in cleaned:
-            dev_match = re.search(r'\b(?:connect|pair)\s+(?:to\s+)?(?:bluetooth\s+)?(?:my\s+)?([A-Za-z0-9_\-\s]+)\b', cleaned)
-            target_dev = dev_match.group(1).strip()
+        bt_match = re.search(r'\b(?:connect|pair)\s+(?:to\s+)?(?:bluetooth\s+)?(?:my\s+)?([A-Za-z0-9_\-\s]+)\b', q, re.IGNORECASE)
+        if bt_match and "wifi" not in cleaned:
+            target_dev = bt_match.group(1).strip()
             res = self.settings.connect_bluetooth_device(target_dev)
             resp = res["text"]
             self.memory.record_turn(q, resp)
